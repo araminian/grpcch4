@@ -5,8 +5,14 @@ import (
 	"net"
 	"os"
 
+	pb "github.com/araminian/grpcch4/proto/todo/v1"
 	"google.golang.org/grpc"
 )
+
+type server struct {
+	d db
+	pb.UnimplementedTodoServiceServer
+}
 
 func main() {
 	args := os.Args[1:]
@@ -32,6 +38,7 @@ func main() {
 	s := grpc.NewServer(opts...)
 
 	//registration of endpoints
+	pb.RegisterTodoServiceServer(s, &server{d: New()})
 
 	log.Printf("listening at %s\n", addr)
 
