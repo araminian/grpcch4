@@ -10,9 +10,10 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	pb "github.com/araminian/grpcch4/proto/todo/v1"
+	pb "github.com/araminian/grpcch4/proto/todo/v2"
 )
 
 func addTask(c pb.TodoServiceClient, description string, dueDate time.Time) uint64 {
@@ -46,6 +47,11 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 
+	mask, err := fieldmaskpb.New(&pb.Task{}, "id")
+	if err != nil {
+		log.Fatalf("error creating mask: %v", err)
+	}
+
 	// add task
 	c := pb.NewTodoServiceClient(conn)
 	fmt.Println("------- ADD TASK -------")
@@ -55,7 +61,7 @@ func main() {
 
 	// list tasks
 	fmt.Println("------- LIST TASKS -------")
-	printTasks(c)
+	printTasks(c, mask)
 	fmt.Println("------- END LIST TASKS -------")
 
 	// update task
@@ -64,13 +70,13 @@ func main() {
 	id2 := addTask(c, "Buy eggs", dueDate)
 
 	taskToUpdate := []*pb.UpdateTaskRequest{
-		{Task: &pb.Task{Id: id1, Done: false, Description: "Buy 2 bread", DueDate: timestamppb.New(dueDate)}},
-		{Task: &pb.Task{Id: id2, Done: true, Description: "Buy 3 eggs", DueDate: timestamppb.New(dueDate)}},
+		{Id: id1, Done: false, Description: "Buy 2 bread", DueDate: timestamppb.New(dueDate)},
+		{Id: id2, Done: true, Description: "Buy 3 eggs", DueDate: timestamppb.New(dueDate)},
 	}
 
 	updateTask(c, taskToUpdate...)
 
-	printTasks(c)
+	printTasks(c, mask)
 	fmt.Println("------- END UPDATE TASK -------")
 
 	// delete task
@@ -80,7 +86,7 @@ func main() {
 		{Id: id2},
 	}
 	deleteTask(c, deleteTasks...)
-	printTasks(c)
+	printTasks(c, mask)
 	fmt.Println("------- END DELETE TASK -------")
 
 	defer func(conn *grpc.ClientConn) {
@@ -90,9 +96,9 @@ func main() {
 	}(conn)
 }
 
-func printTasks(c pb.TodoServiceClient) {
+func printTasks(c pb.TodoServiceClient, mask *fieldmaskpb.FieldMask) {
 
-	req := &pb.ListTasksRequest{}
+	req := &pb.ListTasksRequest{Mask: mask}
 
 	stream, err := c.ListTasks(context.Background(), req)
 	if err != nil {
@@ -126,8 +132,8 @@ func updateTask(
 		if err := stream.Send(req); err != nil {
 			log.Fatalf("error sending task: %v", err)
 		}
-		if req.Task != nil {
-			log.Printf("Client: updated task with id: %d", req.Task.Id)
+		if req.Id != 0 {
+			log.Printf("Client: updated task with id: %d", req.Id)
 		}
 	}
 

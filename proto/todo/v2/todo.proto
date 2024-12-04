@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package todo.v2;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
+
+option go_package = "github.com/araminian/grpcch4/proto/todo/v1";
+
+message Task {
+    uint64 id = 1;
+    string description = 2;
+    bool done = 3;
+    google.protobuf.Timestamp due_date = 4;
+}
+
+message AddTaskRequest {
+    string description = 1;
+    google.protobuf.Timestamp due_date = 2;
+}
+
+message AddTaskResponse {
+    uint64 id = 1;
+}
+
+message ListTasksRequest {
+    google.protobuf.FieldMask mask = 1;
+}
+
+message ListTasksResponse{
+    Task task = 1;
+    bool overdue = 2;
+}
+
+message UpdateTaskRequest {
+    uint64 id = 1;
+    string description = 2;
+    bool done = 3;
+    google.protobuf.Timestamp due_date = 4;
+}
+
+message UpdateTaskResponse {}
+
+
+message DeleteTaskRequest {
+    uint64 id = 1;
+}
+
+message DeleteTaskResponse {}
+
+
+service TodoService {
+    rpc AddTask(AddTaskRequest) returns (AddTaskResponse);
+    rpc ListTasks(ListTasksRequest) returns (stream ListTasksResponse);
+    rpc UpdateTask(stream UpdateTaskRequest) returns (UpdateTaskResponse);
+    rpc DeleteTask(stream DeleteTaskRequest) returns (stream DeleteTaskResponse);
+}

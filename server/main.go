@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	pb "github.com/araminian/grpcch4/proto/todo/v1"
+	pb "github.com/araminian/grpcch4/proto/todo/v2"
 	"google.golang.org/grpc"
 )
 
