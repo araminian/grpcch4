@@ -34,7 +34,11 @@ func main() {
 		}
 	}(lis)
 
-	var opts []grpc.ServerOption
+	// Add interceptors
+	var opts []grpc.ServerOption = []grpc.ServerOption{
+		grpc.UnaryInterceptor(unaryAuthInterceptor),
+		grpc.StreamInterceptor(streamAuthInterceptor),
+	}
 	s := grpc.NewServer(opts...)
 
 	//registration of endpoints

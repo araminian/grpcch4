@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -50,8 +49,11 @@ func main() {
 	}
 
 	addr := args[0]
+	// Add interceptors
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(unaryAuthInterceptor),
+		grpc.WithStreamInterceptor(streamAuthInterceptor),
 	}
 	conn, err := grpc.Dial(addr, opts...)
 
@@ -151,7 +153,6 @@ func updateTask(
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ctx = metadata.AppendToOutgoingContext(ctx, "auth_token", "secret")
 	stream, err := c.UpdateTask(ctx)
 
 	if err != nil {
