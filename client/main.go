@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,7 +25,7 @@ func addTask(c pb.TodoServiceClient, description string, dueDate time.Time) uint
 		DueDate:     timestamppb.New(dueDate),
 	}
 
-	res, err := c.AddTask(context.Background(), req)
+	res, err := c.AddTask(context.Background(), req, grpc.UseCompressor(gzip.Name)) // Enable gzip compression for this call
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			switch s.Code() {
@@ -54,6 +55,7 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(unaryAuthInterceptor),
 		grpc.WithStreamInterceptor(streamAuthInterceptor),
+		grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)), // Enable gzip compression
 	}
 	conn, err := grpc.Dial(addr, opts...)
 

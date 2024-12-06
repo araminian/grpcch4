@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/araminian/grpcch4/proto/todo/v2"
 	"google.golang.org/grpc"
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 type server struct {
