@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -24,7 +27,16 @@ func addTask(c pb.TodoServiceClient, description string, dueDate time.Time) uint
 
 	res, err := c.AddTask(context.Background(), req)
 	if err != nil {
-		panic(err)
+		if s, ok := status.FromError(err); ok {
+			switch s.Code() {
+			case codes.InvalidArgument, codes.Internal:
+				log.Fatalf("Client: Code: %s, Message: %s", s.Code(), s.Message())
+			default:
+				log.Fatal(s)
+			}
+		} else {
+			panic(err)
+		}
 	}
 	log.Printf("Client: added task with id: %d", res.Id)
 	return res.Id
@@ -47,7 +59,7 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 
-	mask, err := fieldmaskpb.New(&pb.Task{}, "id")
+	mask, err := fieldmaskpb.New(&pb.Task{}, "id", "description", "due_date", "done")
 	if err != nil {
 		log.Fatalf("error creating mask: %v", err)
 	}
@@ -56,7 +68,10 @@ func main() {
 	c := pb.NewTodoServiceClient(conn)
 	fmt.Println("------- ADD TASK -------")
 	dueDate := time.Now().Add(time.Hour * 24)
+	pastDueDate := time.Now().Add(time.Second * 5)
 	addTask(c, "Buy milk", dueDate)
+	addTask(c, "Buy milk overdue", pastDueDate)
+	time.Sleep(time.Second * 5)
 	fmt.Println("------- END TASK -------")
 
 	// list tasks
@@ -89,6 +104,11 @@ func main() {
 	printTasks(c, mask)
 	fmt.Println("------- END DELETE TASK -------")
 
+	fmt.Println("------- Error handling -------")
+	//addTask(c, "", dueDate)
+	//addTask(c, "Buy milk", time.Now().Add(-time.Hour*24))
+	fmt.Println("------- END Error handling -------")
+
 	defer func(conn *grpc.ClientConn) {
 		if err := conn.Close(); err != nil {
 			log.Fatalf("unexpected error: %v", err)
@@ -98,22 +118,27 @@ func main() {
 
 func printTasks(c pb.TodoServiceClient, mask *fieldmaskpb.FieldMask) {
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	req := &pb.ListTasksRequest{Mask: mask}
 
-	stream, err := c.ListTasks(context.Background(), req)
+	stream, err := c.ListTasks(ctx, req)
 	if err != nil {
 		log.Fatalf("error listing tasks: %v", err)
 	}
 
 	for {
 		res, err := stream.Recv()
+
+		//Temp , should be removed in next section
+
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
 			log.Fatalf("error receiving tasks: %v", err)
 		}
-
 		fmt.Println(res.Task.String(), "overdue:", res.Overdue)
 	}
 }
@@ -122,7 +147,12 @@ func updateTask(
 	c pb.TodoServiceClient,
 	reqs ...*pb.UpdateTaskRequest,
 ) {
-	stream, err := c.UpdateTask(context.Background())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ctx = metadata.AppendToOutgoingContext(ctx, "auth_token", "secret")
+	stream, err := c.UpdateTask(ctx)
 
 	if err != nil {
 		log.Fatalf("error updating task: %v", err)

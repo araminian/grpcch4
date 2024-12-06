@@ -3,10 +3,14 @@ package main
 import (
 	"context"
 	"io"
+	"log"
 	"slices"
 	"time"
 
 	pb "github.com/araminian/grpcch4/proto/todo/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
@@ -16,7 +20,20 @@ func (s *server) AddTask(
 	_ context.Context,
 	in *pb.AddTaskRequest,
 ) (*pb.AddTaskResponse, error) {
-	id, _ := s.d.addTask(in.Description, in.DueDate.AsTime())
+
+	if in.Description == "" {
+		return nil, status.Error(codes.InvalidArgument, "description is required, got empty string")
+	}
+
+	if in.DueDate != nil && in.DueDate.AsTime().Before(time.Now().UTC()) {
+		return nil, status.Error(codes.InvalidArgument, "due date cannot be in the past")
+	}
+
+	id, err := s.d.addTask(in.Description, in.DueDate.AsTime())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to add task: %v", err)
+	}
+
 	return &pb.AddTaskResponse{Id: id}, nil
 }
 
@@ -31,6 +48,10 @@ func (s *server) ListTasks(
 		Filter(task, req.Mask)
 
 		overdue := task.DueDate != nil && !task.Done && task.DueDate.AsTime().Before(time.Now().UTC())
+
+		log.Printf("Server: sending task: %v", task)
+		log.Printf("Server: overdue: %v", overdue)
+
 		err := stream.Send(&pb.ListTasksResponse{
 			Task:    task,
 			Overdue: overdue,
@@ -40,6 +61,22 @@ func (s *server) ListTasks(
 }
 
 func (s *server) UpdateTask(stream pb.TodoService_UpdateTaskServer) error {
+
+	ctx := stream.Context()
+
+	md, _ := metadata.FromIncomingContext(ctx)
+	log.Printf("Server: metadata: %v", md)
+
+	if t, ok := md["auth_token"]; ok {
+		switch {
+		case len(t) != 1:
+			return status.Error(codes.InvalidArgument, "auth token must be provided exactly once")
+		case t[0] != "secret":
+			return status.Error(codes.Unauthenticated, "invalid auth token")
+		}
+	} else {
+		return status.Error(codes.Unauthenticated, "auth token is required")
+	}
 
 	for {
 		req, err := stream.Recv()
