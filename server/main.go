@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/araminian/grpcch4/proto/todo/v2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
@@ -35,10 +36,17 @@ func main() {
 		}
 	}(lis)
 
+	// Read Certificates and keys
+	creds, err := credentials.NewServerTLSFromFile("../certs/server_cert.pem", "../certs/server_key.pem")
+	if err != nil {
+		log.Fatalf("failed to load certificates: %v", err)
+	}
+
 	// Add interceptors
 	var opts []grpc.ServerOption = []grpc.ServerOption{
 		grpc.UnaryInterceptor(unaryAuthInterceptor),
 		grpc.StreamInterceptor(streamAuthInterceptor),
+		grpc.Creds(creds), // Add TLS credentials
 	}
 	s := grpc.NewServer(opts...)
 
