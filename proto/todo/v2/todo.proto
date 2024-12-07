@@ -4,8 +4,9 @@ package todo.v2;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
+import "validate/validate.proto";
 
-option go_package = "github.com/araminian/grpcch4/proto/todo/v1";
+option go_package = "github.com/araminian/grpcch4/proto/todo/v2";
 
 message Task {
     uint64 id = 1;
@@ -15,8 +16,8 @@ message Task {
 }
 
 message AddTaskRequest {
-    string description = 1;
-    google.protobuf.Timestamp due_date = 2;
+    string description = 1 [(validate.rules).string.min_len = 1];
+    google.protobuf.Timestamp due_date = 2 [(validate.rules).timestamp.gt_now = true];
 }
 
 message AddTaskResponse {

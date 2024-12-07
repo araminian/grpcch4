@@ -117,7 +117,7 @@ func main() {
 	fmt.Println("------- END DELETE TASK -------")
 
 	fmt.Println("------- Error handling -------")
-	//addTask(c, "", dueDate)
+	addTask(c, "", dueDate)
 	//addTask(c, "Buy milk", time.Now().Add(-time.Hour*24))
 	fmt.Println("------- END Error handling -------")
 

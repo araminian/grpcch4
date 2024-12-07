@@ -2,9 +2,10 @@ module github.com/araminian/grpcch4/server
 
 go 1.23.3
 
-require google.golang.org/grpc v1.68.0
+require google.golang.org/grpc v1.68.1
 
 require (
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.1.0 // indirect
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sys v0.25.0 // indirect
 	golang.org/x/text v0.18.0 // indirect

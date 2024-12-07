@@ -20,12 +20,8 @@ func (s *server) AddTask(
 	in *pb.AddTaskRequest,
 ) (*pb.AddTaskResponse, error) {
 
-	if in.Description == "" {
-		return nil, status.Error(codes.InvalidArgument, "description is required, got empty string")
-	}
-
-	if in.DueDate != nil && in.DueDate.AsTime().Before(time.Now().UTC()) {
-		return nil, status.Error(codes.InvalidArgument, "due date cannot be in the past")
+	if err := in.Validate(); err != nil {
+		return nil, err
 	}
 
 	id, err := s.d.addTask(in.Description, in.DueDate.AsTime())
