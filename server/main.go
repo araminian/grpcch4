@@ -6,6 +6,7 @@ import (
 	"os"
 
 	pb "github.com/araminian/grpcch4/proto/todo/v2"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
@@ -44,8 +45,12 @@ func main() {
 
 	// Add interceptors
 	var opts []grpc.ServerOption = []grpc.ServerOption{
-		grpc.UnaryInterceptor(unaryAuthInterceptor),
-		grpc.StreamInterceptor(streamAuthInterceptor),
+		grpc.ChainUnaryInterceptor(
+			auth.UnaryServerInterceptor(validateAuthToken),
+		),
+		grpc.ChainStreamInterceptor(
+			auth.StreamServerInterceptor(validateAuthToken),
+		),
 		grpc.Creds(creds), // Add TLS credentials
 	}
 	s := grpc.NewServer(opts...)
