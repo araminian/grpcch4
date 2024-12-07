@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/araminian/grpcch4/proto/todo/v2"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
@@ -31,6 +32,8 @@ func main() {
 		log.Fatalf("failed to listen: %v\n", err)
 	}
 
+	logger := log.New(os.Stderr, "", log.Ldate|log.Ltime)
+
 	defer func(lis net.Listener) {
 		if err := lis.Close(); err != nil {
 			log.Fatalf("unexpected error: %v", err)
@@ -47,9 +50,11 @@ func main() {
 	var opts []grpc.ServerOption = []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			auth.UnaryServerInterceptor(validateAuthToken),
+			logging.UnaryServerInterceptor(logCalls(logger)),
 		),
 		grpc.ChainStreamInterceptor(
 			auth.StreamServerInterceptor(validateAuthToken),
+			logging.StreamServerInterceptor(logCalls(logger)),
 		),
 		grpc.Creds(creds), // Add TLS credentials
 	}
