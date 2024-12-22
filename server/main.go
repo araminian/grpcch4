@@ -9,7 +9,6 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
@@ -41,10 +40,10 @@ func main() {
 	}(lis)
 
 	// Read Certificates and keys
-	creds, err := credentials.NewServerTLSFromFile("../certs/server_cert.pem", "../certs/server_key.pem")
-	if err != nil {
-		log.Fatalf("failed to load certificates: %v", err)
-	}
+	//creds, err := credentials.NewServerTLSFromFile("../certs/server_cert.pem", "../certs/server_key.pem")
+	//if err != nil {
+	//	log.Fatalf("failed to load certificates: %v", err)
+	//}
 
 	// Add interceptors
 	var opts []grpc.ServerOption = []grpc.ServerOption{
@@ -56,7 +55,7 @@ func main() {
 			auth.StreamServerInterceptor(validateAuthToken),
 			logging.StreamServerInterceptor(logCalls(logger)),
 		),
-		grpc.Creds(creds), // Add TLS credentials
+		//grpc.Creds(creds), // Add TLS credentials
 	}
 	s := grpc.NewServer(opts...)
 
